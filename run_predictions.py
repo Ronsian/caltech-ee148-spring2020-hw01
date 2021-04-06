@@ -20,6 +20,7 @@ def detect_red_light(I):
 
 
     bounding_boxes = [] # This should be a list of lists, each of length 4. See format example below.
+    bounding_boxes_transpose = [] # This is incase their bounding boxes go other way? Based on Slack
 
     '''
     BEGIN YOUR CODE
@@ -30,20 +31,27 @@ def detect_red_light(I):
     of fixed size and returns the results in the proper format.
     '''
 
-    box_height = 8
-    box_width = 6
+    picture_width, picture_height = I.size
+    #picture_width = 640
+    #picture_height = 480
 
-    num_boxes = np.random.randint(1,5)
+    match_dictionary = {}
 
-    for i in range(num_boxes):
-        (n_rows,n_cols,n_channels) = np.shape(I)
+    height = 0
+    for j in range(0, picture_height - light1_height,10):
+        for i in range(0, picture_width - light1_width, 10):
+            #print(j)
+            location = (i, height + j, i + light1_width, height + j + light1_height)
+            picture_match_location = I.crop(location)
+            picture_match_vector = np.asarray(picture_match_location).flatten()
+            normed_picture_match_vector = picture_match_vector/(np.linalg.norm(picture_match_vector, ord=2))
+            match_prob = np.inner(normed_picture_match_vector, normed_light1)
+            match_dictionary[location] = match_prob
+            if(match_prob > 0.88):
+                bounding_boxes.append(location)
+                bounding_boxes_transpose.append((height + j, i, height + j + light1_height, i + light1_width)) #
 
-        tl_row = np.random.randint(n_rows - box_height)
-        tl_col = np.random.randint(n_cols - box_width)
-        br_row = tl_row + box_height
-        br_col = tl_col + box_width
 
-        bounding_boxes.append([tl_row,tl_col,br_row,br_col])
 
     '''
     END YOUR CODE
@@ -54,8 +62,19 @@ def detect_red_light(I):
 
     return bounding_boxes
 
+test_path = 'C:/data/CS 148/test_images'
+test_names = sorted(os.listdir(test_path))
+light1 = Image.open(os.path.join(test_path, test_names[3]))
+light1_vector = np.asarray(light1).flatten()
+light1_width, light1_height = light1.size
+normed_light1 = light1_vector/np.linalg.norm(light1_vector, ord=2)
+
+
+
+
+
 # set the path to the downloaded data:
-data_path = 'C:/data/RedLights2011_Medium'
+data_path = 'C:/data/CS 148/RedLights2011_Medium'
 
 # set a path for saving predictions:
 preds_path = 'C:/data/hw01_preds'
@@ -68,15 +87,16 @@ file_names = sorted(os.listdir(data_path))
 file_names = [f for f in file_names if '.jpg' in f]
 
 preds = {}
-for i in range(len(file_names)):
+for k in range(len(file_names)):
+    print(k)
 
     # read image using PIL:
-    I = Image.open(os.path.join(data_path,file_names[i]))
+    I = Image.open(os.path.join(data_path,file_names[k]))
 
     # convert to numpy array:
-    I = np.asarray(I)
+    #I = np.asarray(I)
 
-    preds[file_names[i]] = detect_red_light(I)
+    preds[file_names[k]] = detect_red_light(I)
 
 # save preds (overwrites any previous predictions!)
 with open(os.path.join(preds_path,'preds.json'),'w') as f:
